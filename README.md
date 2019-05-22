@@ -1,7 +1,7 @@
 # waterfall-sinanews
 
 ### 预览地址
-[预览地址](https://www.clloz.com/study/sinanews/waterfall-sinanews.html "预览地址"]
+[预览地址](https://www.clloz.com/study/sinanews/waterfall-sinanews.html "预览地址")
 
 ### 懒加载原理
 将页面上的图片都指向同一张小图片或者空src，将正确的src保存在 data-src 属性中。写一个方法用来将图片的src换成正确的src，当页面加载的时候先将视窗内的图片调用方法来显示，然后监听滚动事件，当对应的图片出现在视窗中的时候，调用方法把图片的src替换成正确的src来请求图片。
