@@ -5,20 +5,198 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta http-equiv="X-UA-Compatible" content="ie=edge" />
     <title>sinanews</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      .wrap {
+        position: relative;
+        width: 900px;
+        margin: 0 auto;
+        background: lightblue;
+      }
+
+      .wrap .item {
+        position: absolute;
+        width: 280px;
+        margin: 10px;
+        padding: 10px;
+        border: 1px solid #ccc;
+        transition: all .8s;
+        text-align: center;
+        opacity: 0;
+      }
+
+      .wrap .item.hide {
+        display: none;
+      }
+
+      .wrap .item > a {
+        display: block;
+        text-decoration: none;
+        color: black;
+      }
+
+      .wrap .item img {
+        width: 260px;
+      }
+
+      .wrap .item p {
+        font-size: 12px;
+        line-height: 1.8;
+        color: #777371;
+      }
+    </style>
   </head>
   <body>
+    <div class="wrap">
+      <div class="item hide"></div>
+      <!-- <div class="item">
+        <a class="news-link" href="http://slide.mil.news.sina.com.cn/h/slide_8_198_71866.html">
+            <img src="https://k.sinaimg.cn/n/mil/8_ori/upload/21a18b46/213/w2048h1365/20190511/ff0e-hwsffzc4958384.jpg/w640slw.jpg" alt="">
+            <h4>美军林肯号航母通过苏伊士运河</h4>
+            <p>林肯号航母通过苏伊士运河 伊朗：这是美国的心理战</p>
+        </a>
+      </div> -->
+    </div>
     <script src="https://cdn.bootcss.com/jquery/3.4.1/jquery.min.js"></script>
     <script>
-      $.ajax({
-        url: "./sinanews.json",
-        type: "GET",
-        dataType: "json"
-      }).done(function(data) {
-        console.log(data.result.data.list);
-      });
-      $(function() {
+      var app = (function($, window) {
+        //变量声明
+        var $w = $(window)
+        var $wrap = $('.wrap')
+        var pageSize = 10;
+        var pageNum = 0;
+        var nodeWidth = $(".item").outerWidth(true);
+        var colNum = parseInt($wrap.width() / nodeWidth);
+        console.log(colNum)
+        var colHeightArr = [];
+        for (var i = 0; i < colNum; i++) {
+          colHeightArr[i] = 0;
+        }
+        var rendering = false;
+
+        function build() {
+          getData(function (list) {
+            console.log(rendering)
+            rendering = true;
+            $.each(list, function (idx, news) {
+              // console.log(idx, news)
+              var $node = packNode(news)
+              $node.find('img').on('load', function () {
+                $wrap.append($node)
+                waterfall($node)
+              })
+            })
+          })
+          rendering = false;
+          console.log(rendering)
+        }
+
+        //生成元素
+        function packNode(data) {
+          var nodeStr = `
+              <div class="item">
+                <a class="news-link" href="${data.url}">
+                    <img src="${data.thumb}" alt="">
+                    <h4>${data.stitle}</h4>
+                    <p>${data.title}</p>
+                </a>
+              </div>
+          `
+          return $(nodeStr)
+        }
+
+        //获取数据
+        function getData(callback) {
+          $.ajax({
+            url: "https://photo.sina.cn/aj/v2/index?cate=military",
+            dataType: "jsonp",
+            jsonp: "callback",
+            data: {
+              pagesize: pageSize,
+              page: pageNum
+            }
+          }).done(function(ret) {
+            if (ret && ret.code == 1) {
+              callback(ret.data);
+              pageNum++;
+            } else {
+              console.log("get error data");
+            }
+          });
+        }
+
+        //瀑布流布局
+        function waterfall($node) {
+          var idx = 0;
+          var minHeight = colHeightArr[0];
+          for (let i = 0; i < colHeightArr.length; i++) {
+            if (colHeightArr[i] < minHeight) {
+              minHeight = colHeightArr[i]
+              idx = i;
+            }
+          }
+
+          $node.css({
+              left: nodeWidth * idx,
+              top: minHeight,
+              opacity: 1
+            });
+          colHeightArr[idx] += $node.outerHeight(true)
+          $(".wrap").height(Math.max.apply(null, colHeightArr));
+        }
+
+        //懒加载
+        function lazyLoad() {
+          $w.on('scroll', debounce(function () {
+            console.log($w.height(), $('.wrap').height(), $w.scrollTop())
+            build()
+          }, 300))
+        }
         
-      });
+
+        //debounce
+        function debounce(fn, interval) {
+          var timeout = null;
+          return function () {
+            if (!rendering || $w.height() + $w.scrollTop() + 50 < $('.wrap').height()) return;
+            clearTimeout(timeout);
+            timeout = setTimeout(() => {
+              console.log(this)
+              fn.call(this, arguments)
+            }, interval)
+          }
+        }
+
+        //是否在视窗内
+        function inViewport($node) {
+          var w_h = $w.height()
+          var w_s = $w.scrollTop()
+          var offset = $node.offset().top
+          if (w_h + w_s > offset) {
+            return true;
+          } else {
+            return false;
+          }
+        }
+
+        //初始化
+        function init() {
+          build()
+          lazyLoad();
+        }
+        
+        //暴露接口
+        return {
+          init: init
+        }
+      })(jQuery, window);
+
+      app.init()
     </script>
   </body>
 </html>
